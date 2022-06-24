@@ -1,16 +1,35 @@
-﻿using Microsoft.AspNetCore.Blazor.Hosting;
+using Blazor.IndexedDB.Test;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using TG.Blazor.IndexedDB;
 
-namespace Blazor.IndexedDB.Test
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
+builder.RootComponents.Add<App>("#app");
+builder.RootComponents.Add<HeadOutlet>("head::after");
+
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+builder.Services.AddIndexedDB(dbStore =>
 {
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            CreateHostBuilder(args).Build().Run();
-        }
+    dbStore.DbName = "TheFactory";
+    dbStore.Version = 1;
 
-        public static IWebAssemblyHostBuilder CreateHostBuilder(string[] args) =>
-            BlazorWebAssemblyHost.CreateDefaultBuilder()
-                .UseBlazorStartup<Startup>();
-    }
-}
+    dbStore.Stores.Add(new StoreSchema
+    {
+        Name = "Employees",
+        PrimaryKey = new IndexSpec { Name = "id", KeyPath = "id", Auto = true },
+        Indexes = new List<IndexSpec>
+        {
+            new IndexSpec{Name="firstName", KeyPath = "firstName", Auto=false},
+            new IndexSpec{Name="lastName", KeyPath = "lastName", Auto=false}
+
+        }
+    });
+    dbStore.Stores.Add(new StoreSchema
+    {
+        Name = "Outbox",
+        PrimaryKey = new IndexSpec { Auto = true }
+    });
+});
+
+await builder.Build().RunAsync();
